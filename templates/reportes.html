@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Reportes | MediCita{% endblock %}
+{% block crumb %}Reportes{% endblock %}
+{% block content %}
+<div class="eyebrow">INFORMES</div>
+{% set qs = request.query_string.decode() %}
+<div class="head"><div><h1>Reportes de citas</h1><p>Consulta el estado de las citas y exporta los resultados.</p></div>
+  <div class="acts noprint">
+    <a class="btn sec" href="{{ url_for('reportes_csv') }}?{{ qs }}">Exportar CSV</a>
+    <a class="btn" href="{{ url_for('reportes_pdf') }}?{{ qs }}">{{ icon('file') }} Descargar PDF</a></div></div>
+<div class="stats">
+  <div class="card stat"><div class="r">Total de citas<div class="ico b">{{ icon('cal') }}</div></div><strong>{{ rows|length }}</strong><span class="s">Según los filtros</span></div>
+  <div class="card stat"><div class="r">Programadas<div class="ico o">{{ icon('clock') }}</div></div><strong>{{ resumen.Programada }}</strong><span class="s">Pendientes de atención</span></div>
+  <div class="card stat"><div class="r">Completadas<div class="ico g">{{ icon('pulse') }}</div></div><strong>{{ resumen.Completada }}</strong><span class="s">Atendidas</span></div>
+  <div class="card stat"><div class="r">Canceladas<div class="ico p">{{ icon('x') }}</div></div><strong>{{ resumen.Cancelada }}</strong><span class="s">No realizadas</span></div>
+</div>
+<div class="grid2">
+  <div class="card">
+    <form class="filtros" method="get">
+      <label>Desde<input type="date" name="desde" value="{{ f.desde or '' }}"></label>
+      <label>Hasta<input type="date" name="hasta" value="{{ f.hasta or '' }}"></label>
+      <label>Profesional<select name="profesional"><option value="">Todos</option>
+        {% for p in lista_prof %}<option value="{{ p.id }}" {{ 'selected' if f.profesional==p.id|string }}>{{ p.nombre }}</option>{% endfor %}</select></label>
+      <label>Estado<select name="estado"><option value="">Todos</option>
+        {% for e in ESTADOS %}<option {{ 'selected' if f.estado==e }}>{{ e }}</option>{% endfor %}</select></label>
+      <button class="btn sec">Consultar</button>
+    </form>
+    <div class="tw"><table>
+      <tr><th>FECHA Y HORA</th><th>PACIENTE</th><th>PROFESIONAL</th><th>ESTADO</th></tr>
+      {% for c in rows %}
+      <tr><td><b>{{ c.inicio[:10] }}</b><small>{{ c.inicio[11:] }}</small></td><td>{{ c.paciente }}</td><td>{{ c.profesional }}</td>
+        <td><span class="pill {{ c.estado }}">{{ c.estado }}</span></td></tr>
+      {% else %}<tr><td colspan="4" class="vacio">No hay citas con estos filtros.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div><b>Citas por profesional</b><span>Según los filtros</span></div></div>
+    <div class="tw"><table>
+      {% for n, t in por_prof %}<tr><td>{{ n }}</td><td style="text-align:right"><b>{{ t }}</b></td></tr>
+      {% else %}<tr><td class="vacio">Sin datos.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+</div>
+{% endblock %}

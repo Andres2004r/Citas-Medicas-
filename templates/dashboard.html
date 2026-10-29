@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="eyebrow">RESUMEN OPERATIVO</div>
+<div class="head"><div><h1>Panel de control</h1><p>Vista general de las citas de hoy.</p></div>
+  <a class="btn" href="{{ url_for('citas', nueva=1) }}">{{ icon('plus') }} Programar cita</a></div>
+<div class="stats">
+  <div class="card stat"><div class="r">Pacientes activos<div class="ico b">{{ icon('users') }}</div></div><strong>{{ stats.pacientes }}</strong><span class="s">Pacientes registrados</span></div>
+  <div class="card stat"><div class="r">Profesionales<div class="ico g">{{ icon('pulse') }}</div></div><strong>{{ stats.profesionales }}</strong><span class="s">Disponibles para citas</span></div>
+  <div class="card stat"><div class="r">Citas de hoy<div class="ico p">{{ icon('cal') }}</div></div><strong>{{ stats.hoy }}</strong><span class="s">Programadas para hoy</span></div>
+  <div class="card stat"><div class="r">Canceladas hoy<div class="ico o">{{ icon('x') }}</div></div><strong>{{ stats.canceladas }}</strong><span class="s">Citas canceladas</span></div>
+</div>
+<div class="grid2">
+  <div class="card">
+    <div class="ch"><div><b>Próximas citas</b><span>Siguientes citas programadas</span></div><a href="{{ url_for('citas') }}">Ver todas →</a></div>
+    <div class="tw"><table>
+      <tr><th>PACIENTE</th><th>PROFESIONAL</th><th>FECHA Y HORA</th></tr>
+      {% for c in proximas %}
+      <tr><td><b>{{ c.paciente }}</b><small>{{ c.documento }}</small></td>
+          <td><b>{{ c.profesional }}</b><small>{{ c.especialidad }}</small></td>
+          <td><b>{{ c.inicio[:10] }}</b><small>{{ c.inicio[11:] }} · {{ c.duracion }} min</small></td></tr>
+      {% else %}<tr><td colspan="3" class="vacio">No hay citas próximas. Programa la primera desde Citas.</td></tr>{% endfor %}
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div><b>Accesos rápidos</b><span>Tareas frecuentes</span></div></div>
+    <a class="quick" href="{{ url_for('citas', nueva=1) }}"><div class="ico b">{{ icon('plus') }}</div><div><b>Programar cita</b><small>Asignar fecha, hora y profesional</small></div><span class="ar">→</span></a>
+    <a class="quick" href="{{ url_for('pacientes') }}"><div class="ico g">{{ icon('users') }}</div><div><b>Registrar paciente</b><small>Agregar una persona al sistema</small></div><span class="ar">→</span></a>
+    <a class="quick" href="{{ url_for('reportes') }}"><div class="ico p">{{ icon('file') }}</div><div><b>Generar reporte</b><small>Consultar y exportar citas</small></div><span class="ar">→</span></a>
+  </div>
+</div>
+{% endblock %}

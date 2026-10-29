@@ -1,0 +1,51 @@
+{% from '_icons.html' import icon %}
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}MediCita{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head><body>
+{% block body %}
+<div class="app">
+  <aside class="side">
+    <div class="pad">
+      <div class="brand"><div class="logo">M</div><div><b>MediCita</b><small>Gestión de citas</small></div></div>
+      <div class="menu-t">MENÚ PRINCIPAL</div>
+      <nav>
+        <a href="{{ url_for('dashboard') }}" class="{{ 'on' if activo=='dashboard' }}">{{ icon('grid') }}Panel general</a>
+        <a href="{{ url_for('pacientes') }}" class="{{ 'on' if activo=='pacientes' }}">{{ icon('users') }}Pacientes</a>
+        <a href="{{ url_for('profesionales') }}" class="{{ 'on' if activo=='profesionales' }}">{{ icon('pulse') }}Profesionales</a>
+        <a href="{{ url_for('citas') }}" class="{{ 'on' if activo=='citas' }}">{{ icon('cal') }}Citas</a>
+        <a href="{{ url_for('reportes') }}" class="{{ 'on' if activo=='reportes' }}">{{ icon('file') }}Reportes</a>
+      </nav>
+    </div>
+    <div class="side-sp"></div>
+    <div class="pad">
+      <div class="sesion">Sesión activa<b>{{ session.usuario }}</b></div>
+      <a class="salir" href="{{ url_for('logout') }}">{{ icon('out') }}Cerrar sesión</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div><small>GESTIÓN CLÍNICA</small><b>{% block crumb %}Panel general{% endblock %}</b></div>
+      <div class="estado">Sistema operativo</div>
+    </header>
+    <div class="content">{% block content %}{% endblock %}</div>
+  </div>
+</div>
+{% endblock %}
+
+{% with msgs = get_flashed_messages(with_categories=true) %}{% if msgs %}
+{% set cat, txt = msgs[0] %}
+<div class="modal open" id="flash"><div class="box msg">
+  <button class="x" data-close aria-label="Cerrar">✕</button>
+  <div class="big {{ cat }}">{{ '✓' if cat=='ok' else '!' }}</div>
+  <h2>{{ '¡Operación exitosa!' if cat=='ok' else 'No se pudo completar' }}</h2>
+  <p>{{ txt }}</p>
+  <button class="btn" data-close>Entendido</button>
+</div></div>
+{% endif %}{% endwith %}
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>

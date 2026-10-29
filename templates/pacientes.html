@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Pacientes | MediCita{% endblock %}
+{% block crumb %}Pacientes{% endblock %}
+{% block content %}
+<div class="eyebrow">DIRECTORIO</div>
+<div class="head"><div><h1>Pacientes</h1><p>Registra y administra a los pacientes.</p></div>
+  <button class="btn" data-open="m-pac" data-title="Nuevo paciente">{{ icon('plus') }} Nuevo paciente</button></div>
+<div class="card">
+  <form class="filtros" method="get"><label>Buscar<input name="q" value="{{ b }}" placeholder="Nombre o documento"></label>
+    <button class="btn sec">Buscar</button></form>
+  <div class="tw"><table>
+    <tr><th>PACIENTE</th><th>CONTACTO</th><th>NACIMIENTO</th><th></th></tr>
+    {% for r in rows %}
+    <tr><td><b>{{ r.nombre }}</b><small>Doc. {{ r.documento }}</small></td>
+      <td>{{ r.telefono or '-' }}<small>{{ r.email or '' }}</small></td>
+      <td>{{ r.nacimiento or '-' }}</td>
+      <td><div class="acts">
+        <button class="btn sec sm" data-open="m-pac" data-title="Editar paciente" data-item='{{ r|tojson }}'>Editar</button>
+        <form method="post" action="{{ url_for('pacientes_eliminar', pid=r.id) }}" onsubmit="return confirm('¿Eliminar a este paciente?')">
+          <button class="btn red sm">Eliminar</button></form></div></td></tr>
+    {% else %}<tr><td colspan="4" class="vacio">No hay pacientes. Registra el primero con el botón Nuevo paciente.</td></tr>{% endfor %}
+  </table></div>
+</div>
+<div class="modal" id="m-pac"><div class="box"><button class="x" data-close aria-label="Cerrar">✕</button>
+  <h2 data-title>Nuevo paciente</h2>
+  <form method="post" action="{{ url_for('pacientes_guardar') }}"><input type="hidden" name="id">
+    <div class="fg">
+      <label>Documento<input name="documento" required></label>
+      <label>Nombre completo<input name="nombre" required></label>
+      <label>Teléfono<input name="telefono"></label>
+      <label>Correo<input name="email" type="email"></label>
+      <label class="full">Fecha de nacimiento<input name="nacimiento" type="date"></label>
+    </div>
+    <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar</button></div>
+  </form></div></div>
+{% endblock %}

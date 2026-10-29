@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Iniciar sesión | MediCita{% endblock %}
+{% block body %}
+<div class="lg"><div class="lgbox">
+  <div class="lgl">
+    <div class="logo">M</div>
+    <h2>Citas médicas sin cruces</h2>
+    <p>Administra pacientes y profesionales, programa citas por fecha y hora y consulta reportes desde un solo lugar.</p>
+    <div class="pie">Seguro · Organizado · En tiempo real</div>
+  </div>
+  <div class="lgr">
+    <div class="e">BIENVENIDO</div>
+    <h1>Iniciar sesión</h1>
+    <p class="sub">Ingresa tus credenciales de administrador.</p>
+    <form method="post">
+      <label>Usuario<input name="usuario" placeholder="Tu usuario" required autofocus></label>
+      <label>Contraseña<input name="clave" type="password" placeholder="Tu contraseña" required></label>
+      <button class="btn">Entrar al sistema →</button>
+    </form>
+    <div class="nota">Acceso exclusivo para personal autorizado.</div>
+  </div>
+</div></div>
+{% endblock %}

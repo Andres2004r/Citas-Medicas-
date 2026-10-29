@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Profesionales | MediCita{% endblock %}
+{% block crumb %}Profesionales{% endblock %}
+{% block content %}
+<div class="eyebrow">EQUIPO MÉDICO</div>
+<div class="head"><div><h1>Profesionales</h1><p>Administra a los profesionales de la salud.</p></div>
+  <button class="btn" data-open="m-pro" data-title="Nuevo profesional">{{ icon('plus') }} Nuevo profesional</button></div>
+<div class="card">
+  <form class="filtros" method="get"><label>Buscar<input name="q" value="{{ b }}" placeholder="Nombre o especialidad"></label>
+    <button class="btn sec">Buscar</button></form>
+  <div class="tw"><table>
+    <tr><th>PROFESIONAL</th><th>ESPECIALIDAD</th><th>CONTACTO</th><th></th></tr>
+    {% for r in rows %}
+    <tr><td><b>{{ r.nombre }}</b></td><td>{{ r.especialidad }}</td>
+      <td>{{ r.telefono or '-' }}<small>{{ r.email or '' }}</small></td>
+      <td><div class="acts">
+        <button class="btn sec sm" data-open="m-pro" data-title="Editar profesional" data-item='{{ r|tojson }}'>Editar</button>
+        <form method="post" action="{{ url_for('profesionales_eliminar', pid=r.id) }}" onsubmit="return confirm('¿Eliminar a este profesional?')">
+          <button class="btn red sm">Eliminar</button></form></div></td></tr>
+    {% else %}<tr><td colspan="4" class="vacio">No hay profesionales. Registra el primero con el botón Nuevo profesional.</td></tr>{% endfor %}
+  </table></div>
+</div>
+<div class="modal" id="m-pro"><div class="box"><button class="x" data-close aria-label="Cerrar">✕</button>
+  <h2 data-title>Nuevo profesional</h2>
+  <form method="post" action="{{ url_for('profesionales_guardar') }}"><input type="hidden" name="id">
+    <div class="fg">
+      <label>Nombre completo<input name="nombre" required></label>
+      <label>Especialidad<input name="especialidad" required></label>
+      <label>Teléfono<input name="telefono"></label>
+      <label>Correo<input name="email" type="email"></label>
+    </div>
+    <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar</button></div>
+  </form></div></div>
+{% endblock %}

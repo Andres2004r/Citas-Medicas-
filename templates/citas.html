@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Citas | MediCita{% endblock %}
+{% block crumb %}Citas{% endblock %}
+{% block content %}
+<div class="eyebrow">AGENDA</div>
+<div class="head"><div><h1>Citas médicas</h1><p>Programa, reprograma y cancela citas sin cruces de horario.</p></div>
+  <button class="btn" data-open="m-cita" data-title="Programar cita" data-item='{"duracion":30,"fecha":"{{ hoy }}"}' {% if request.args.get('nueva') %}data-autoopen{% endif %}>{{ icon('plus') }} Programar cita</button></div>
+<div class="card">
+  <form class="filtros" method="get">
+    <label>Buscar<input name="q" value="{{ f.q or '' }}" placeholder="Paciente o documento"></label>
+    <label>Desde<input type="date" name="desde" value="{{ f.desde or '' }}"></label>
+    <label>Hasta<input type="date" name="hasta" value="{{ f.hasta or '' }}"></label>
+    <label>Profesional<select name="profesional"><option value="">Todos</option>
+      {% for p in lista_prof %}<option value="{{ p.id }}" {{ 'selected' if f.profesional==p.id|string }}>{{ p.nombre }}</option>{% endfor %}</select></label>
+    <label>Estado<select name="estado"><option value="">Todos</option>
+      {% for e in ESTADOS %}<option {{ 'selected' if f.estado==e }}>{{ e }}</option>{% endfor %}</select></label>
+    <button class="btn sec">Filtrar</button>
+  </form>
+  <div class="tw"><table>
+    <tr><th>FECHA Y HORA</th><th>PACIENTE</th><th>PROFESIONAL</th><th>MOTIVO</th><th>ESTADO</th><th></th></tr>
+    {% for c in rows %}
+    <tr><td><b>{{ c.inicio[:10] }}</b><small>{{ c.inicio[11:] }} · {{ c.duracion }} min</small></td>
+      <td><b>{{ c.paciente }}</b><small>{{ c.documento }}</small></td>
+      <td><b>{{ c.profesional }}</b><small>{{ c.especialidad }}</small></td>
+      <td>{{ c.motivo or '-' }}</td>
+      <td><span class="pill {{ c.estado }}">{{ c.estado }}</span></td>
+      <td>{% if c.estado=='Programada' %}<div class="acts">
+        <button class="btn sec sm" data-open="m-cita" data-title="Reprogramar cita"
+          data-item='{{ {"id":c.id,"paciente_id":c.paciente_id,"profesional_id":c.profesional_id,"fecha":c.inicio[:10],"hora":c.inicio[11:],"duracion":c.duracion,"motivo":c.motivo or ""}|tojson }}'>Reprogramar</button>
+        <form method="post" action="{{ url_for('citas_estado', cid=c.id, accion='completar') }}"><button class="btn green sm">Completar</button></form>
+        <form method="post" action="{{ url_for('citas_estado', cid=c.id, accion='cancelar') }}" onsubmit="return confirm('¿Cancelar esta cita?')"><button class="btn red sm">Cancelar</button></form>
+      </div>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="6" class="vacio">No hay citas con estos filtros. Programa una nueva con el botón Programar cita.</td></tr>{% endfor %}
+  </table></div>
+</div>
+<div class="modal" id="m-cita"><div class="box"><button class="x" data-close aria-label="Cerrar">✕</button>
+  <h2 data-title>Programar cita</h2>
+  <form method="post" action="{{ url_for('citas_guardar') }}"><input type="hidden" name="id">
+    <div class="fg">
+      <label class="full">Paciente<select name="paciente_id" required><option value="">Selecciona un paciente</option>
+        {% for p in lista_pacientes %}<option value="{{ p.id }}">{{ p.nombre }} · {{ p.documento }}</option>{% endfor %}</select></label>
+      <label class="full">Profesional<select name="profesional_id" required><option value="">Selecciona un profesional</option>
+        {% for p in lista_prof %}<option value="{{ p.id }}">{{ p.nombre }} · {{ p.especialidad }}</option>{% endfor %}</select></label>
+      <label>Fecha<input type="date" name="fecha" min="{{ hoy }}" required></label>
+      <label>Hora<input type="time" name="hora" min="07:00" max="18:45" step="900" required></label>
+      <label>Duración<select name="duracion">{% for d in DURACIONES %}<option value="{{ d }}">{{ d }} minutos</option>{% endfor %}</select></label>
+      <label>Motivo<input name="motivo" placeholder="Control, dolor, examen..."></label>
+    </div>
+    <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar cita</button></div>
+  </form></div></div>
+{% endblock %}
