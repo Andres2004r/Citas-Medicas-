@@ -25,7 +25,7 @@
   <form method="post" action="{{ url_for('profesionales_guardar') }}"><input type="hidden" name="id">
     <div class="fg">
       <label>Nombre completo<input name="nombre" required minlength="3" maxlength="80" pattern="{{ PAT_NOMBRE }}" title="Solo letras, espacios, punto, apóstrofe y guion" placeholder="Dra. Ana Gómez"></label>
-      <label>Especialidad<input name="especialidad" required minlength="3" maxlength="80" pattern="{{ PAT_NOMBRE }}" title="Solo letras y espacios" placeholder="Medicina general"></label>
+      <label>Especialidad<select name="especialidad" required><option value="">Selecciona una especialidad</option>{% for e in ESPECIALIDADES %}<option>{{ e }}</option>{% endfor %}</select></label>
       <label>Teléfono<input name="telefono" type="tel" required pattern="[0-9+ ]{7,16}" maxlength="16" title="Celular de 10 dígitos que empiece por 3 o fijo de 7 dígitos" placeholder="3101234567"></label>
       <label>Correo<input name="email" type="email" maxlength="100" placeholder="nombre@correo.com"></label>
     </div>

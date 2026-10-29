@@ -16,6 +16,11 @@ HORA_CIERRE = 19      # 19:00
 UTC_OFFSET = -5       # Colombia
 ESTADOS = ["Programada", "Completada", "Cancelada"]
 DURACIONES = [15, 30, 45, 60]
+ESPECIALIDADES = [
+    "Cardiología", "Dermatología", "Endocrinología", "Fisioterapia", "Gastroenterología",
+    "Ginecología y obstetricia", "Medicina general", "Medicina interna", "Neurología",
+    "Nutrición y dietética", "Odontología", "Oftalmología", "Ortopedia y traumatología",
+    "Otorrinolaringología", "Pediatría", "Psicología", "Psiquiatría", "Urología"]
 
 
 def ahora():
@@ -46,6 +51,13 @@ def val_nombre(v, campo="El nombre"):
         return v, f"{campo} es obligatorio."
     if not RE_NOMBRE.match(v) or sum(c.isalpha() for c in v) < 3:
         return v, f"{campo} debe tener de 3 a 80 caracteres y solo admite letras, espacios, punto, apóstrofe y guion."
+    return " ".join(w[:1].upper() + w[1:] for w in v.split()), None
+
+
+def val_especialidad(v):
+    v = limpiar(v)
+    if v not in ESPECIALIDADES:
+        return v, "Selecciona una especialidad de la lista."
     return v, None
 
 
@@ -261,7 +273,7 @@ def consultar_citas(args):
 @app.context_processor
 def globales():
     hoy = ahora()
-    return dict(DURACIONES=DURACIONES, ESTADOS=ESTADOS,
+    return dict(DURACIONES=DURACIONES, ESTADOS=ESTADOS, ESPECIALIDADES=ESPECIALIDADES,
                 hoy=hoy.strftime("%Y-%m-%d"),
                 fecha_max=(hoy + timedelta(days=365)).strftime("%Y-%m-%d"),
                 nac_min=f"{hoy.year - 120}-01-01",
@@ -391,7 +403,7 @@ def profesionales_guardar():
     pid = f.get("id") or None
     (nombre, especialidad, telefono, email), errores = recolectar(
         val_nombre(f.get("nombre"), "El nombre"),
-        val_nombre(f.get("especialidad"), "La especialidad"),
+        val_especialidad(f.get("especialidad")),
         val_telefono(f.get("telefono")),
         val_email(f.get("email")))
     if pid and not q("SELECT id FROM profesionales WHERE id=? AND activo=1", (pid,), one=True):
