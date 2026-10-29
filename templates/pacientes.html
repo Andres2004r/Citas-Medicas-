@@ -25,11 +25,11 @@
   <h2 data-title>Nuevo paciente</h2>
   <form method="post" action="{{ url_for('pacientes_guardar') }}"><input type="hidden" name="id">
     <div class="fg">
-      <label>Documento<input name="documento" required></label>
-      <label>Nombre completo<input name="nombre" required></label>
-      <label>Teléfono<input name="telefono"></label>
-      <label>Correo<input name="email" type="email"></label>
-      <label class="full">Fecha de nacimiento<input name="nacimiento" type="date"></label>
+      <label>Documento<input name="documento" required inputmode="numeric" pattern="[0-9]{5,12}" minlength="5" maxlength="12" title="Solo números, de 5 a 12 dígitos" placeholder="1001001001"></label>
+      <label>Nombre completo<input name="nombre" required minlength="3" maxlength="80" pattern="{{ PAT_NOMBRE }}" title="Solo letras, espacios, punto, apóstrofe y guion" placeholder="Nombre y apellido"></label>
+      <label>Teléfono<input name="telefono" type="tel" required pattern="[0-9+ ]{7,16}" maxlength="16" title="Celular de 10 dígitos que empiece por 3 o fijo de 7 dígitos" placeholder="3101234567"></label>
+      <label>Correo<input name="email" type="email" maxlength="100" placeholder="nombre@correo.com"></label>
+      <label class="full">Fecha de nacimiento<input name="nacimiento" type="date" min="{{ nac_min }}" max="{{ hoy }}"></label>
     </div>
     <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar</button></div>
   </form></div></div>

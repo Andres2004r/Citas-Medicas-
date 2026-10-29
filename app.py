@@ -1,4 +1,4 @@
-import os, io, csv, sqlite3
+import os, io, re, csv, sqlite3
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import (Flask, g, render_template, request, redirect, url_for,
@@ -20,6 +20,87 @@ DURACIONES = [15, 30, 45, 60]
 
 def ahora():
     return datetime.utcnow() + timedelta(hours=UTC_OFFSET)
+
+
+# ---------- Validaciones ----------
+LETRAS = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
+PAT_NOMBRE = (f"[{LETRAS}][{LETRAS}' .\\-]{{1,78}}[{LETRAS}.]")
+RE_NOMBRE = re.compile(f"^{PAT_NOMBRE}$")
+RE_EMAIL = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
+
+
+def limpiar(v):
+    return " ".join((v or "").split())
+
+
+def a_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def val_nombre(v, campo="El nombre"):
+    v = limpiar(v)
+    if not v:
+        return v, f"{campo} es obligatorio."
+    if not RE_NOMBRE.match(v) or sum(c.isalpha() for c in v) < 3:
+        return v, f"{campo} debe tener de 3 a 80 caracteres y solo admite letras, espacios, punto, apóstrofe y guion."
+    return v, None
+
+
+def val_documento(v):
+    d = re.sub(r"[\s.]", "", v or "")
+    if not d:
+        return d, "El documento es obligatorio."
+    if not d.isdigit() or not 5 <= len(d) <= 12:
+        return d, "El documento debe tener entre 5 y 12 dígitos, sin letras ni símbolos."
+    if len(set(d)) == 1:
+        return d, "El documento no es válido."
+    return d, None
+
+
+def val_telefono(v):
+    t = re.sub(r"[\s\-().]", "", v or "")
+    if t.startswith("+57"):
+        t = t[3:]
+    elif t.startswith("57") and len(t) == 12:
+        t = t[2:]
+    if not t:
+        return t, "El teléfono es obligatorio."
+    if not re.fullmatch(r"3\d{9}|60\d{8}|[2-8]\d{6}", t):
+        return t, "El teléfono no es válido. Usa un celular de 10 dígitos que empiece por 3 o un fijo de 7 dígitos."
+    return t, None
+
+
+def val_email(v):
+    v = (v or "").strip().lower()
+    if not v:
+        return v, None
+    if len(v) > 100 or not RE_EMAIL.match(v):
+        return v, "El correo no es válido. Ejemplo: nombre@correo.com."
+    return v, None
+
+
+def val_nacimiento(v):
+    v = (v or "").strip()
+    if not v:
+        return v, None
+    try:
+        d = datetime.strptime(v, "%Y-%m-%d").date()
+    except ValueError:
+        return v, "La fecha de nacimiento no es válida."
+    hoy = ahora().date()
+    if d > hoy:
+        return v, "La fecha de nacimiento no puede ser futura."
+    if d.year < hoy.year - 120:
+        return v, "La fecha de nacimiento no es válida."
+    return v, None
+
+
+def recolectar(*resultados):
+    """Recibe pares (valor, error) y devuelve (valores, errores)."""
+    return [r[0] for r in resultados], [r[1] for r in resultados if r[1]]
 
 
 # ---------- Base de datos ----------
@@ -133,6 +214,8 @@ def validar_cita(paciente_id, prof_id, fecha, hora, dur, cita_id=None):
     fin = ini + timedelta(minutes=dur)
     if ini < ahora():
         return None, "No se puede programar una cita en una fecha u hora pasada."
+    if ini > ahora() + timedelta(days=365):
+        return None, "Solo se pueden programar citas dentro del próximo año."
     apertura = ini.replace(hour=HORA_APERTURA, minute=0)
     cierre = ini.replace(hour=HORA_CIERRE, minute=0)
     if ini < apertura or fin > cierre:
@@ -177,8 +260,12 @@ def consultar_citas(args):
 
 @app.context_processor
 def globales():
+    hoy = ahora()
     return dict(DURACIONES=DURACIONES, ESTADOS=ESTADOS,
-                hoy=ahora().strftime("%Y-%m-%d"))
+                hoy=hoy.strftime("%Y-%m-%d"),
+                fecha_max=(hoy + timedelta(days=365)).strftime("%Y-%m-%d"),
+                nac_min=f"{hoy.year - 120}-01-01",
+                PAT_NOMBRE=PAT_NOMBRE)
 
 
 # ---------- Acceso ----------
@@ -190,9 +277,13 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        u = q("SELECT * FROM usuarios WHERE usuario=?",
-              (request.form.get("usuario", "").strip(),), one=True)
-        if u and check_password_hash(u["clave"], request.form.get("clave", "")):
+        usuario = request.form.get("usuario", "").strip()[:50]
+        clave = request.form.get("clave", "")[:128]
+        if not usuario or not clave:
+            flash("Ingresa tu usuario y tu contraseña.", "error")
+            return render_template("login.html")
+        u = q("SELECT * FROM usuarios WHERE usuario=?", (usuario,), one=True)
+        if u and check_password_hash(u["clave"], clave):
             session["usuario"] = u["usuario"]
             flash("Sesión iniciada correctamente.", "ok")
             return redirect(url_for("dashboard"))
@@ -238,21 +329,36 @@ def pacientes():
 @login_required
 def pacientes_guardar():
     f = request.form
-    datos = (f["documento"].strip(), f["nombre"].strip(), f.get("telefono", "").strip(),
-             f.get("email", "").strip(), f.get("nacimiento", ""))
-    if not datos[0] or not datos[1]:
-        flash("Documento y nombre son obligatorios.", "error")
+    pid = f.get("id") or None
+    (documento, nombre, telefono, email, nacimiento), errores = recolectar(
+        val_documento(f.get("documento")),
+        val_nombre(f.get("nombre"), "El nombre"),
+        val_telefono(f.get("telefono")),
+        val_email(f.get("email")),
+        val_nacimiento(f.get("nacimiento")))
+    if pid and not q("SELECT id FROM pacientes WHERE id=? AND activo=1", (pid,), one=True):
+        errores.append("El paciente que intentas editar no existe.")
+    dup = None
+    if not errores:
+        dup = q("SELECT id, activo FROM pacientes WHERE documento=? AND id!=?",
+                (documento, pid or 0), one=True)
+        if dup and (dup["activo"] or pid):
+            errores.append("Ya existe un paciente con ese documento.")
+    if errores:
+        flash(" ".join(errores), "error")
         return redirect(url_for("pacientes"))
-    try:
-        if f.get("id"):
-            ex("UPDATE pacientes SET documento=?, nombre=?, telefono=?, email=?, nacimiento=? WHERE id=?",
-               datos + (f["id"],))
-            flash("Paciente actualizado correctamente.", "ok")
-        else:
-            ex("INSERT INTO pacientes(documento,nombre,telefono,email,nacimiento) VALUES(?,?,?,?,?)", datos)
-            flash("Paciente registrado correctamente.", "ok")
-    except sqlite3.IntegrityError:
-        flash("Ya existe un paciente con ese documento.", "error")
+    datos = (documento, nombre, telefono, email, nacimiento)
+    if pid:
+        ex("UPDATE pacientes SET documento=?, nombre=?, telefono=?, email=?, nacimiento=? WHERE id=?",
+           datos + (pid,))
+        flash("Paciente actualizado correctamente.", "ok")
+    elif dup:
+        ex("""UPDATE pacientes SET nombre=?, telefono=?, email=?, nacimiento=?, activo=1
+              WHERE id=?""", datos[1:] + (dup["id"],))
+        flash("Paciente registrado correctamente.", "ok")
+    else:
+        ex("INSERT INTO pacientes(documento,nombre,telefono,email,nacimiento) VALUES(?,?,?,?,?)", datos)
+        flash("Paciente registrado correctamente.", "ok")
     return redirect(url_for("pacientes"))
 
 
@@ -282,14 +388,25 @@ def profesionales():
 @login_required
 def profesionales_guardar():
     f = request.form
-    datos = (f["nombre"].strip(), f["especialidad"].strip(),
-             f.get("telefono", "").strip(), f.get("email", "").strip())
-    if not datos[0] or not datos[1]:
-        flash("Nombre y especialidad son obligatorios.", "error")
+    pid = f.get("id") or None
+    (nombre, especialidad, telefono, email), errores = recolectar(
+        val_nombre(f.get("nombre"), "El nombre"),
+        val_nombre(f.get("especialidad"), "La especialidad"),
+        val_telefono(f.get("telefono")),
+        val_email(f.get("email")))
+    if pid and not q("SELECT id FROM profesionales WHERE id=? AND activo=1", (pid,), one=True):
+        errores.append("El profesional que intentas editar no existe.")
+    if not errores and q("""SELECT id FROM profesionales WHERE activo=1 AND id!=?
+                            AND lower(nombre)=lower(?) AND lower(especialidad)=lower(?)""",
+                         (pid or 0, nombre, especialidad), one=True):
+        errores.append("Ya existe un profesional con ese nombre y especialidad.")
+    if errores:
+        flash(" ".join(errores), "error")
         return redirect(url_for("profesionales"))
-    if f.get("id"):
+    datos = (nombre, especialidad, telefono, email)
+    if pid:
         ex("UPDATE profesionales SET nombre=?, especialidad=?, telefono=?, email=? WHERE id=?",
-           datos + (f["id"],))
+           datos + (pid,))
         flash("Profesional actualizado correctamente.", "ok")
     else:
         ex("INSERT INTO profesionales(nombre,especialidad,telefono,email) VALUES(?,?,?,?)", datos)
@@ -325,25 +442,35 @@ def citas():
 def citas_guardar():
     f = request.form
     cita_id = f.get("id") or None
+    pac, prof = a_int(f.get("paciente_id")), a_int(f.get("profesional_id"))
+    motivo = limpiar(f.get("motivo"))
+    errores = []
+    if not pac or not q("SELECT id FROM pacientes WHERE id=? AND activo=1", (pac,), one=True):
+        errores.append("Selecciona un paciente válido.")
+    if not prof or not q("SELECT id FROM profesionales WHERE id=? AND activo=1", (prof,), one=True):
+        errores.append("Selecciona un profesional válido.")
+    if not f.get("fecha") or not f.get("hora"):
+        errores.append("Indica la fecha y la hora de la cita.")
+    if not 3 <= len(motivo) <= 200:
+        errores.append("El motivo es obligatorio y debe tener entre 3 y 200 caracteres.")
     if cita_id:
         actual = q("SELECT estado FROM citas WHERE id=?", (cita_id,), one=True)
         if not actual or actual["estado"] != "Programada":
-            flash("Solo se pueden reprogramar citas en estado Programada.", "error")
-            return redirect(url_for("citas"))
-    inicio, error = validar_cita(f["paciente_id"], f["profesional_id"], f["fecha"],
-                                 f["hora"], f["duracion"], cita_id)
+            errores.append("Solo se pueden reprogramar citas en estado Programada.")
+    if errores:
+        flash(" ".join(errores), "error")
+        return redirect(url_for("citas"))
+    inicio, error = validar_cita(pac, prof, f["fecha"], f["hora"], f.get("duracion"), cita_id)
     if error:
         flash(error, "error")
-        return redirect(request.referrer or url_for("citas"))
+        return redirect(url_for("citas"))
     if cita_id:
         ex("""UPDATE citas SET paciente_id=?, profesional_id=?, inicio=?, duracion=?, motivo=?
-              WHERE id=?""", (f["paciente_id"], f["profesional_id"], inicio,
-                              f["duracion"], f.get("motivo", "").strip(), cita_id))
+              WHERE id=?""", (pac, prof, inicio, int(f["duracion"]), motivo, cita_id))
         flash("Cita reprogramada correctamente.", "ok")
     else:
         ex("""INSERT INTO citas(paciente_id, profesional_id, inicio, duracion, motivo, creada)
-              VALUES(?,?,?,?,?,?)""", (f["paciente_id"], f["profesional_id"], inicio,
-                                       f["duracion"], f.get("motivo", "").strip(),
+              VALUES(?,?,?,?,?,?)""", (pac, prof, inicio, int(f["duracion"]), motivo,
                                        ahora().strftime("%Y-%m-%d %H:%M")))
         flash("Cita programada correctamente.", "ok")
     return redirect(url_for("citas"))

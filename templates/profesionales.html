@@ -24,10 +24,10 @@
   <h2 data-title>Nuevo profesional</h2>
   <form method="post" action="{{ url_for('profesionales_guardar') }}"><input type="hidden" name="id">
     <div class="fg">
-      <label>Nombre completo<input name="nombre" required></label>
-      <label>Especialidad<input name="especialidad" required></label>
-      <label>Teléfono<input name="telefono"></label>
-      <label>Correo<input name="email" type="email"></label>
+      <label>Nombre completo<input name="nombre" required minlength="3" maxlength="80" pattern="{{ PAT_NOMBRE }}" title="Solo letras, espacios, punto, apóstrofe y guion" placeholder="Dra. Ana Gómez"></label>
+      <label>Especialidad<input name="especialidad" required minlength="3" maxlength="80" pattern="{{ PAT_NOMBRE }}" title="Solo letras y espacios" placeholder="Medicina general"></label>
+      <label>Teléfono<input name="telefono" type="tel" required pattern="[0-9+ ]{7,16}" maxlength="16" title="Celular de 10 dígitos que empiece por 3 o fijo de 7 dígitos" placeholder="3101234567"></label>
+      <label>Correo<input name="email" type="email" maxlength="100" placeholder="nombre@correo.com"></label>
     </div>
     <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar</button></div>
   </form></div></div>

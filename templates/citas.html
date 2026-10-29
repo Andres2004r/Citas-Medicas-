@@ -41,10 +41,10 @@
         {% for p in lista_pacientes %}<option value="{{ p.id }}">{{ p.nombre }} · {{ p.documento }}</option>{% endfor %}</select></label>
       <label class="full">Profesional<select name="profesional_id" required><option value="">Selecciona un profesional</option>
         {% for p in lista_prof %}<option value="{{ p.id }}">{{ p.nombre }} · {{ p.especialidad }}</option>{% endfor %}</select></label>
-      <label>Fecha<input type="date" name="fecha" min="{{ hoy }}" required></label>
+      <label>Fecha<input type="date" name="fecha" min="{{ hoy }}" max="{{ fecha_max }}" required></label>
       <label>Hora<input type="time" name="hora" min="07:00" max="18:45" step="900" required></label>
       <label>Duración<select name="duracion">{% for d in DURACIONES %}<option value="{{ d }}">{{ d }} minutos</option>{% endfor %}</select></label>
-      <label>Motivo<input name="motivo" placeholder="Control, dolor, examen..."></label>
+      <label>Motivo<input name="motivo" required minlength="3" maxlength="200" placeholder="Control, dolor, examen..."></label>
     </div>
     <div class="foot"><button type="button" class="btn sec" data-close>Cancelar</button><button class="btn">Guardar cita</button></div>
   </form></div></div>
